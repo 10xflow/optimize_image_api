@@ -3,6 +3,7 @@ import os
 import pandas as pd
 from io import BytesIO
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -33,16 +34,21 @@ def get_max_dimensions(blog_name: str, image_type: str) -> tuple[int, int]:
 
 def resize_image(image_bytes: bytes, max_width: int, max_height: int, return_logs=False):
     logs = []
-    def log(msg):
-        logs.append(msg)
-        logger.info(msg)
+    def log(step, msg):
+        log_entry = {
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "step": step,
+            "message": msg
+        }
+        logs.append(log_entry)
+        logger.info(f"{step}: {msg}")
 
-    log(f"Starting image resize: max_width={max_width}, max_height={max_height}")
+    log("resize_start", f"Starting image resize: max_width={max_width}, max_height={max_height}")
     original_size = len(image_bytes)
-    log(f"Original file size: {original_size} bytes")
+    log("original_size", f"Original file size: {original_size} bytes")
     img = Image.open(BytesIO(image_bytes))
     original_width, original_height = img.size
-    log(f"Original image size: width={original_width}, height={original_height}")
+    log("original_dimensions", f"Original image size: width={original_width}, height={original_height}")
 
     aspect_ratio = original_width / original_height
     if original_width >= original_height:
@@ -52,16 +58,16 @@ def resize_image(image_bytes: bytes, max_width: int, max_height: int, return_log
         new_height = min(original_height, max_height)
         new_width = int(new_height * aspect_ratio)
 
-    log(f"Resizing to: width={new_width}, height={new_height}")
+    log("resize_dimensions", f"Resizing to: width={new_width}, height={new_height}")
     resized_img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
 
     output_buffer = BytesIO()
     resized_img.save(output_buffer, format="JPEG", quality=85, optimize=True)
     output_buffer.seek(0)
     optimized_size = output_buffer.getbuffer().nbytes
-    log(f"Optimized file size: {optimized_size} bytes")
-    log(f"File size reduction: {original_size - optimized_size} bytes ({100 * (1 - optimized_size/original_size):.2f}% smaller)")
-    log("Image resize and save complete.")
+    log("optimized_size", f"Optimized file size: {optimized_size} bytes")
+    log("reduction", f"File size reduction: {original_size - optimized_size} bytes ({100 * (1 - optimized_size/original_size):.2f}% smaller)")
+    log("resize_complete", "Image resize and save complete.")
 
     if return_logs:
         return output_buffer, logs
