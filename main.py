@@ -1,6 +1,6 @@
 import logging
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from utils.image_processor import get_max_dimensions, resize_image
 import shutil
 import os
@@ -37,18 +37,11 @@ async def resize_image_api(
         log(f"Max dimensions for {blog_name} ({image_type}): width={max_w}, height={max_h}")
 
         # Resize and compress
-        resized_image_io, resize_logs = resize_image(contents, max_w, max_h, return_logs=True)
-        logs.extend(resize_logs)
+        resized_image_io, _ = resize_image(contents, max_w, max_h, return_logs=True)
         log("Image resized successfully.")
 
-        # Encode image as base64 for JSON response
-        img_bytes = resized_image_io.getvalue()
-        img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-
-        return JSONResponse(content={
-            "logs": logs,
-            "image_base64": img_b64
-        })
+        # Return the binary image directly
+        return StreamingResponse(resized_image_io, media_type="image/jpeg")
 
     except Exception as e:
         logger.error(f"Error processing image: {e}")
