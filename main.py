@@ -50,10 +50,12 @@ async def resize_image_api(
         log("done", "Image resized successfully.")
 
         if logs_only:
-            return JSONResponse(content={"logs": logs})
+            # Convert logs to a dict: {step: message}
+            logs_dict = {log['step']: log['message'] for log in logs}
+            return JSONResponse(content={"logs": logs_dict})
 
         # Add logs to response header as JSON (truncated for header safety)
-        log_json = json.dumps(logs)[-4000:]
+        log_json = json.dumps({log['step']: log['message'] for log in logs})[-4000:]
         return StreamingResponse(
             resized_image_io,
             media_type="image/jpeg",
@@ -67,4 +69,5 @@ async def resize_image_api(
             "step": "error",
             "message": str(e)
         })
-        return JSONResponse(status_code=400, content={"logs": logs, "error": str(e)})
+        logs_dict = {log['step']: log['message'] for log in logs}
+        return JSONResponse(status_code=400, content={"logs": logs_dict, "error": str(e)})
