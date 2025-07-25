@@ -40,8 +40,13 @@ async def resize_image_api(
         resized_image_io, _ = resize_image(contents, max_w, max_h, return_logs=True)
         log("Image resized successfully.")
 
-        # Return the binary image directly
-        return StreamingResponse(resized_image_io, media_type="image/jpeg")
+        # Add logs to response header (truncated for header safety)
+        log_str = " | ".join(logs)[-4000:]  # Truncate to last 4000 chars
+        return StreamingResponse(
+            resized_image_io,
+            media_type="image/jpeg",
+            headers={"X-Process-Logs": log_str}
+        )
 
     except Exception as e:
         logger.error(f"Error processing image: {e}")
