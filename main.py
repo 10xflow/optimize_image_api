@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Query
 from fastapi.responses import JSONResponse, StreamingResponse
 from utils.image_processor import get_max_dimensions, resize_image
 import shutil
@@ -21,6 +21,7 @@ async def resize_image_api(
     image: UploadFile = File(...),
     blog_name: str = Form(...),
     image_type: str = Form(...),  # "Hauptbild" or "Zusatzbild"
+    logs_only: bool = Query(False, description="Return logs instead of image"),
 ):
     logs = []
     def log(msg):
@@ -41,6 +42,9 @@ async def resize_image_api(
         resized_image_io, resize_logs = resize_image(contents, max_w, max_h, return_logs=True)
         logs.extend(resize_logs)
         log("Image resized successfully.")
+
+        if logs_only:
+            return JSONResponse(content={"logs": logs})
 
         # Add logs to response header as JSON (truncated for header safety)
         log_json = json.dumps(logs)[-4000:]  # Truncate to last 4000 chars
